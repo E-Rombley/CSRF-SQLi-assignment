@@ -1,6 +1,8 @@
 const express = require('express')
 const session = require('express-session')
 const db = require('./database')
+const fs = require('fs')
+const path = require('path')
 
 const app = express()
 
@@ -10,11 +12,9 @@ app.use(session({
   secret: 'supersecret',
   resave: false,
   saveUninitialized: false,
-  // No sameSite restriction — makes CSRF possible
   cookie: { sameSite: false, httpOnly: false }
 }))
 
-// ─── Pages ────────────────────────────────────────────────────────────────────
 
 app.get('/', (_req, res) => res.redirect('/login'))
 
@@ -42,7 +42,7 @@ app.get('/login', (req, res) => {
 </html>`)
 })
 
-// VULNERABLE: SQLi — input concatenated directly into query, no parameterization
+
 app.post('/login', (req, res) => {
   const { username, password } = req.body
   const query = `SELECT * FROM users WHERE username = '${username}' AND password = '${password}'`
@@ -117,6 +117,12 @@ app.get('/dashboard', (req, res) => {
     ${postItems}
   </div>
 
+  <div class="card">
+    <h3>Documents</h3>
+    <a href="/file?name=welcome.txt">welcome.txt</a> &nbsp;
+    <a href="/file?name=report.txt">report.txt</a>
+  </div>
+
   <a href="/logout">Log out</a>
 </body>
 </html>`)
@@ -125,7 +131,6 @@ app.get('/dashboard', (req, res) => {
   })
 })
 
-// VULNERABLE: CSRF — checks session cookie but never validates a CSRF token
 app.post('/transfer', (req, res) => {
   if (!req.session.userId) return res.status(401).send('Not logged in')
 
@@ -138,6 +143,17 @@ app.post('/transfer', (req, res) => {
     db.run(`UPDATE users SET balance = balance + ? WHERE username = ?`, [amt, to], () => {
       res.redirect('/dashboard')
     })
+  })
+})
+
+// VULNERABLE: path traversal — name is joined directly with no sanitization
+app.get('/file', (req, res) => {
+  if (!req.session.userId) return res.redirect('/login')
+  const filepath = path.join(__dirname, 'files', req.query.name)
+  console.log('[path traversal] reading:', filepath)
+  fs.readFile(filepath, 'utf8', (err, data) => {
+    if (err) return res.status(404).send(`File not found: ${filepath}`)
+    res.send(`<pre style="font-family:monospace;padding:20px">${data}</pre><br><a href="/dashboard">Back</a>`)
   })
 })
 
