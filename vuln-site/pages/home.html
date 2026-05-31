@@ -1,0 +1,16 @@
+Welcome to VulnSite!
+
+This is the home page, included from: pages/home.html
+
+Try including other pages:
+  ?page=about.html
+  ?page=contact.html
+
+Or try Local File Inclusion (LFI):
+  ?page=../app.js            <- server source code
+  ?page=../database.js       <- database config
+  ?page=../../etc/passwd     <- system password file
+
+Or try Remote File Inclusion (RFI):
+  ?page=http://localhost:3000/sqli   <- self-SSRF (include another page)
+  ?page=http://example.com/          <- fetch remote content

